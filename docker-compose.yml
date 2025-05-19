@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: mims_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mims
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  user-service:
+    build:
+      context: ./user-service
+    container_name: mims_user_service
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - nats
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/mims?schema=user_service
+      JWT_SECRET: supersecreto
+      JWT_EXPIRES_IN: 3600s
+    command: npm run start:prod
+
+  order-service:
+    build:
+      context: ./order-service
+    container_name: mims_order_service
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - nats
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/mims?schema=order_service
+      JWT_SECRET: supersecreto
+      JWT_EXPIRES_IN: 3600s
+    command: npm run start:prod
+  
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+
+volumes:
+  pgdata:
